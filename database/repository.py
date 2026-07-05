@@ -1,4 +1,11 @@
-from database.models import Repository, Commit, Issue, IssueComment
+from database.models import (
+    Repository,
+    Commit,
+    Issue,
+    IssueComment,
+    PullRequest,
+    PullRequestReview
+)
 
 
 def save_repository(session, repository_data):
@@ -138,3 +145,78 @@ def save_issue_comments(session, issue_id, comments_data):
     session.commit()
 
     return saved_comments
+def save_pull_requests(session, repository_id, pull_requests_data):
+    saved_pull_requests = []
+
+    for pr_data in pull_requests_data:
+        existing_pr = (
+            session.query(PullRequest)
+            .filter_by(
+                repository_id=repository_id,
+                pr_number=pr_data["pr_number"]
+            )
+            .first()
+        )
+
+        if existing_pr:
+            existing_pr.github_pr_id = pr_data["github_pr_id"]
+            existing_pr.author_login = pr_data["author_login"]
+            existing_pr.title = pr_data["title"]
+            existing_pr.body = pr_data["body"]
+            existing_pr.state = pr_data["state"]
+            existing_pr.merged = pr_data["merged"]
+            existing_pr.created_at = pr_data["created_at"]
+            existing_pr.updated_at = pr_data["updated_at"]
+            existing_pr.closed_at = pr_data["closed_at"]
+            existing_pr.merged_at = pr_data["merged_at"]
+
+            saved_pull_requests.append(existing_pr)
+
+        else:
+            new_pr = PullRequest(
+                repository_id=repository_id,
+                **pr_data
+            )
+
+            session.add(new_pr)
+            session.flush()
+
+            saved_pull_requests.append(new_pr)
+
+    session.commit()
+
+    return saved_pull_requests
+
+
+def save_pull_request_reviews(session, pull_request_id, reviews_data):
+    saved_reviews = []
+
+    for review_data in reviews_data:
+        existing_review = (
+            session.query(PullRequestReview)
+            .filter_by(
+                github_review_id=review_data["github_review_id"]
+            )
+            .first()
+        )
+
+        if existing_review:
+            existing_review.reviewer_login = review_data["reviewer_login"]
+            existing_review.state = review_data["state"]
+            existing_review.body = review_data["body"]
+            existing_review.submitted_at = review_data["submitted_at"]
+
+            saved_reviews.append(existing_review)
+
+        else:
+            new_review = PullRequestReview(
+                pull_request_id=pull_request_id,
+                **review_data
+            )
+
+            session.add(new_review)
+            saved_reviews.append(new_review)
+
+    session.commit()
+
+    return saved_reviews
