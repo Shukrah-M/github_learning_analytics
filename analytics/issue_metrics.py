@@ -27,16 +27,26 @@ def calculate_issue_metrics(issues, comments):
     )
 
     return {
-        "total_issues_created": total_issues,
-        "total_issues_closed": len(closed_issues),
-        "issue_closure_rate": round(closure_rate, 3),
-       "mean_issue_resolution_days": (
-    round(mean(resolution_times), 2)
-    if resolution_times else None
-),
-        "total_issue_comments": len(comments),
-        "mean_comments_per_issue": round(
-            len(comments) / total_issues,
-            2,
-        ) if total_issues > 0 else None,
-    }
+    "total_issues_created": total_issues,
+    "total_issues_closed": len(closed_issues),
+
+    "issue_closure_rate": (
+        round(closure_rate, 3)
+        if closure_rate is not None
+        else None
+    ),
+
+    "mean_issue_resolution_days": (
+        round(mean(resolution_times), 2)
+        if resolution_times
+        else None
+    ),
+
+    "total_issue_comments": len(comments),
+
+    "mean_comments_per_issue": (
+        round(len(comments) / total_issues, 2)
+        if total_issues > 0
+        else None
+    ),
+}
