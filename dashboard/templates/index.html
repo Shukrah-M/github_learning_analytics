@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Repositories - GitHub Learning Analytics{% endblock %}
+
+{% block content %}
+<h1>Repositories</h1>
+<p class="page-intro">Select a repository to view its behavioural metrics, experimentation-intensity score and NLP text classification.</p>
+
+{% if rows %}
+<div class="repository-grid">
+  {% for row in rows %}
+  <a class="repository-card" href="{{ url_for('repository_detail', repository_id=row.repository.id) }}">
+    <h2>{{ row.repository.owner }}/{{ row.repository.name }}</h2>
+    <p class="repository-meta">{{ row.repository.language or "Unknown language" }}</p>
+    <p class="repository-stat"><strong>{{ row.commit_count }}</strong> commits recorded</p>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="empty-state">No repositories found. Run <code>python app.py</code> to extract a repository first.</p>
+{% endif %}
+{% endblock %}

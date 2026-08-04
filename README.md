@@ -44,7 +44,11 @@ The system currently supports:
 - transformation of API responses into structured records;
 - storage of extracted records in PostgreSQL;
 - updating of existing records during repeated pipeline runs;
-- execution of the extraction workflow through a unified pipeline.
+- execution of the extraction workflow through a unified pipeline;
+- behavioural metric calculation (commit, issue, pull-request);
+- an experimental composite experimentation-intensity score;
+- an NLP classifier for repository text (see `docs/nlp_classifier_validation.md`);
+- a responsive web dashboard for browsing repositories and results.
 
 The full extraction pipeline can be run through:
 
@@ -108,6 +112,8 @@ The current implementation uses:
 - Psycopg 3
 - Requests
 - python-dotenv
+- scikit-learn (NLP classifier)
+- Flask (dashboard)
 - Git
 - GitHub
 
@@ -119,6 +125,20 @@ The current implementation uses:
 GitHub-Learning-Analytics-System/
 │
 ├── analytics/
+│   ├── nlp/
+│   │   ├── classifier.py
+│   │   └── repository_texts.py
+│   ├── commit_metrics.py
+│   ├── issue_metrics.py
+│   ├── pull_request_metrics.py
+│   ├── experimentation_score.py
+│   └── repository_analysis.py
+│
+├── dashboard/
+│   ├── app.py
+│   ├── charts.py
+│   ├── templates/
+│   └── static/css/style.css
 │
 ├── database/
 │   ├── __init__.py
@@ -205,6 +225,58 @@ The test process has demonstrated successful extraction and persistence of repos
 
 ---
 
+## Running the Dashboard
+
+The dashboard is a Flask web app that reads directly from the same
+PostgreSQL database as the extraction pipeline. It is a **responsive
+web app**, not separate native builds: run it once on a Windows or
+macOS machine that has Python and Postgres access, then open it from
+any browser — the same machine, or another device (iPhone, iPad,
+another laptop) on the same network.
+
+1. Install dependencies (once):
+
+   ```powershell
+   pip install -r requirements.txt
+   ```
+
+2. Make sure the database has at least one extracted repository
+   (`python app.py`) and, optionally, a trained NLP model
+   (`python -m scripts.train_nlp_classifier` — the dashboard still
+   works without this, it just skips the NLP section).
+
+3. Start the dashboard:
+
+   **Windows (PowerShell):**
+
+   ```powershell
+   python dashboard/app.py
+   ```
+
+   **macOS / Linux:**
+
+   ```bash
+   python3 dashboard/app.py
+   ```
+
+4. Open it:
+
+   - On the same machine: `http://127.0.0.1:5000`
+   - From another device on the same Wi-Fi (e.g. a phone): find this
+     machine's local IP address (`ipconfig` on Windows, `ifconfig`
+     or `ipconfig getifaddr en0` on macOS) and open
+     `http://<that IP>:5000` in the device's browser.
+
+The dashboard lists all repositories currently in the database and,
+for each one, shows its behavioural metrics, the experimentation-
+intensity score breakdown, a commit-activity sparkline, and the NLP
+category distribution with a learning-quality indicator. All charts
+are rendered as inline SVG with no external/CDN dependency, so the
+page looks and works the same whether it is loaded locally or over a
+phone's browser.
+
+---
+
 ## Data Security
 
 Sensitive credentials are stored using environment variables.
@@ -213,27 +285,22 @@ Sensitive credentials are stored using environment variables.
 
 ## Next Development Stage
 
-The next development stage is data quality validation.
+Data quality validation (record counts, duplicate-key detection,
+foreign-key integrity, timestamp consistency) remains a planned
+addition, alongside expanding the NLP gold-standard dataset — the
+`reflection` category currently has only 2 labelled examples, which
+caps how reliable its classifier predictions can be (see
+`docs/nlp_classifier_validation.md`).
 
-The planned validation checks include:
-
-- record count checks;
-- duplicate commit SHA detection;
-- duplicate issue number checks within repositories;
-- duplicate pull request number checks within repositories;
-- missing critical identifier checks;
-- foreign-key integrity checks;
-- timestamp consistency checks.
-
-Following data validation, development will proceed to:
+Completed so far:
 
 1. commit behaviour metrics;
 2. issue behaviour metrics;
 3. pull request behaviour metrics;
-4. temporal aggregation and trend analysis;
-5. NLP analysis of textual artefacts;
-6. metric validation;
-7. interactive dashboard development.
+4. an experimental composite experimentation-intensity score;
+5. NLP classification of textual artefacts;
+6. controlled-repository metric validation;
+7. a responsive web dashboard.
 
 ---
 

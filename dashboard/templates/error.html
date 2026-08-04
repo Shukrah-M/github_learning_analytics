@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}Error - GitHub Learning Analytics{% endblock %}
+
+{% block content %}
+<h1>Something went wrong</h1>
+<p class="empty-state">{{ message }}</p>
+<a class="back-link" href="{{ url_for('index') }}">&larr; Back to repositories</a>
+{% endblock %}

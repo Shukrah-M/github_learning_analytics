@@ -16,6 +16,14 @@ def get_repository_by_id(session, repository_id):
     )
 
 
+def get_all_repositories(session):
+    return (
+        session.query(Repository)
+        .order_by(Repository.owner, Repository.name)
+        .all()
+    )
+
+
 def get_commits(session, repository_id):
     return (
         session.query(Commit)

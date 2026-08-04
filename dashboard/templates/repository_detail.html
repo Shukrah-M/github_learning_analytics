@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}{{ repository.owner }}/{{ repository.name }} - GitHub Learning Analytics{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{{ url_for('index') }}">&larr; All repositories</a>
+<h1>{{ repository.owner }}/{{ repository.name }}</h1>
+<p class="repository-description">{{ repository.description or "No description provided." }}</p>
+
+<section class="score-summary">
+  <h2>Experimentation Intensity Score</h2>
+  {% if score.experimentation_intensity_score is not none %}
+    <p class="score-headline">{{ "%.1f"|format(score.experimentation_intensity_score) }} <span class="score-out-of">/ 100</span></p>
+  {% else %}
+    <p class="score-headline score-headline-empty">N/A</p>
+  {% endif %}
+  <p class="score-caveat">
+    Composite score, normalised relative to the other repositories currently
+    in the database. This score is exploratory and not yet formally
+    validated (see <code>docs/metric_specification.md</code> &sect;12) &mdash;
+    use it for relative comparison, not as a validated measurement.
+  </p>
+  {{ charts.score_bar | safe }}
+</section>
+
+<section class="metric-grid">
+  {% for group in metric_groups %}
+  <div class="metric-card">
+    <h3>{{ group.title }}</h3>
+    <dl>
+      {% for label, value in group.rows %}
+      <dt>{{ label }}</dt>
+      <dd>{{ value }}</dd>
+      {% endfor %}
+    </dl>
+  </div>
+  {% endfor %}
+</section>
+
+<section class="timeline-section">
+  <h2>Commit activity over time</h2>
+  {{ charts.commit_sparkline | safe }}
+</section>
+
+<section class="nlp-section">
+  <h2>Text Classification (NLP)</h2>
+  {% if nlp_error %}
+  <p class="empty-state">{{ nlp_error }}</p>
+  {% elif nlp_result %}
+  <div class="nlp-summary">
+    {{ charts.nlp_donut | safe }}
+    <div class="nlp-stats">
+      <p class="nlp-headline">{{ "%.1f"|format(nlp_result.learning_quality_indicator) }}%
+        of classified text falls into a substantive learning-indicator category.</p>
+      <ul class="category-list">
+        {% for label, count in nlp_result.category_distribution.items() %}
+        <li><span class="category-name">{{ label }}</span><span class="category-count">{{ count }}</span></li>
+        {% endfor %}
+      </ul>
+      <p class="nlp-caveat">
+        The classifier is trained on a small manually coded dataset. The
+        "reflection" category has only 2 training examples and its
+        predictions should be treated as unreliable
+        (see <code>docs/nlp_classifier_validation.md</code>).
+      </p>
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}
