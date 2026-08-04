@@ -1,0 +1,37 @@
+{
+    "training_records": 101,
+    "cross_validation_folds": 2,
+    "cross_validation_repeats": 5,
+    "selected_model": "logistic_regression",
+    "class_distribution": {
+        "problem_identification": 18,
+        "experimentation": 10,
+        "reflection": 2,
+        "refinement": 37,
+        "none": 34
+    },
+    "accuracy_mean": 0.4415686274509804,
+    "macro_f1_mean": 0.34035884537185923,
+    "weighted_f1_mean": 0.43076427800346007,
+    "model_comparison_rows": [
+        {
+            "model": "logistic_regression",
+            "accuracy_mean": 0.4415686274509804,
+            "macro_f1_mean": 0.34035884537185923,
+            "weighted_f1_mean": 0.43076427800346007
+        },
+        {
+            "model": "linear_svc",
+            "accuracy_mean": 0.4236078431372549,
+            "macro_f1_mean": 0.3360529637630688,
+            "weighted_f1_mean": 0.41703701578905605
+        },
+        {
+            "model": "complement_nb",
+            "accuracy_mean": 0.3820392156862745,
+            "macro_f1_mean": 0.31580096106936156,
+            "weighted_f1_mean": 0.3909013626369108
+        }
+    ],
+    "scikit_learn_version": "1.9.0"
+}
