@@ -3,3 +3,9 @@ __pycache__/
 .env
 *.pyc
 data/github.db
+
+# Private research manifest: maps pseudonymised sample IDs (P001-P005)
+# to real repository owners/names. Kept out of version control per
+# docs/public_repository_selection_protocol.md.
+data/pilot_repository_candidates.csv
+data/public_repository_manifest.csv

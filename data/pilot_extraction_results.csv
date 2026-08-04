@@ -1,0 +1,6 @@
+sample_id,category,repository_id,commits,issues,issue_comments,pull_requests,pull_request_reviews,outside_window_records,counts_match,result,notes
+P001,mvp,7,56,4,1,7,7,0,Yes,Pass,Extraction counts matched and all records were inside the window
+P002,saas,9,34,1,2,6,1,0,Yes,Pass,Extraction counts matched and all records were inside the window
+P003,web-application,10,7,31,15,58,17,0,Yes,Pass,Extraction counts matched and all records were inside the window
+P004,prototype,11,59,0,0,3,0,0,Yes,Pass,Extraction counts matched and all records were inside the window
+P005,startup,12,12,1,1,4,1,0,Yes,Pass,Extraction counts matched and all records were inside the window
