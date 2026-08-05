@@ -31,6 +31,7 @@
   </a>
   {% endfor %}
 </div>
+<p class="export-all-link"><a href="{{ url_for('export_all_repositories_csv') }}">Export all repositories (CSV)</a></p>
 {% else %}
 <p class="empty-state">No repositories yet. Click "Add repository" above to extract one from GitHub.</p>
 {% endif %}

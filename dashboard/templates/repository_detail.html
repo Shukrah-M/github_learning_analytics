@@ -4,8 +4,13 @@
 
 {% block content %}
 <a class="back-link" href="{{ url_for('index') }}">&larr; All repositories</a>
-<h1>{{ repository.owner }}/{{ repository.name }}</h1>
-<p class="repository-description">{{ repository.description or "No description provided." }}</p>
+<div class="page-header-row">
+  <div>
+    <h1>{{ repository.owner }}/{{ repository.name }}</h1>
+    <p class="repository-description">{{ repository.description or "No description provided." }}</p>
+  </div>
+  <a class="button-link" href="{{ url_for('export_repository_csv', repository_id=repository.id) }}">Export report (CSV)</a>
+</div>
 
 <section class="score-summary">
   <h2>Experimentation Intensity Score</h2>

@@ -1,9 +1,21 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
+
 import dashboard.app as dashboard_app_module
 from dashboard.app import app
+from dashboard.rate_limit import RateLimiter
 from extractor.github_api import GitHubAPIError
+
+
+@pytest.fixture(autouse=True)
+def reset_add_repository_rate_limiter():
+    """Give every test a fresh rate limiter, since it's shared module state."""
+    dashboard_app_module.add_repository_rate_limiter = RateLimiter(
+        max_requests=dashboard_app_module.ADD_REPOSITORY_RATE_LIMIT,
+        window_seconds=dashboard_app_module.ADD_REPOSITORY_RATE_WINDOW_SECONDS,
+    )
 
 
 def make_repository(
@@ -256,3 +268,48 @@ def test_add_repository_post_rejects_invalid_owner_name(monkeypatch):
 
     assert response.status_code == 200
     assert b"must be valid GitHub names" in response.data
+
+
+def test_add_repository_post_rate_limits_after_repeated_requests(
+    monkeypatch,
+):
+    make_session_local(monkeypatch)
+    monkeypatch.setattr(
+        dashboard_app_module,
+        "run_extraction_pipeline",
+        lambda session, owner, repo: {
+            "repository": make_repository(repository_id=5)
+        },
+    )
+    monkeypatch.setattr(
+        dashboard_app_module,
+        "add_repository_rate_limiter",
+        RateLimiter(max_requests=2, window_seconds=3600),
+    )
+
+    client = app.test_client()
+
+    for _ in range(2):
+        csrf_token = get_csrf_token(client, "/repositories/new")
+        response = client.post(
+            "/repositories/new",
+            data={
+                "owner": "torvalds",
+                "repo": "linux",
+                "csrf_token": csrf_token,
+            },
+        )
+        assert response.status_code == 302
+
+    csrf_token = get_csrf_token(client, "/repositories/new")
+    response = client.post(
+        "/repositories/new",
+        data={
+            "owner": "torvalds",
+            "repo": "linux",
+            "csrf_token": csrf_token,
+        },
+    )
+
+    assert response.status_code == 429
+    assert b"Too many repositories added recently" in response.data

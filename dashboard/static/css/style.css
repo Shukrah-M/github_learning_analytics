@@ -204,6 +204,16 @@ h3 {
   margin-top: 1rem;
 }
 
+.export-all-link {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.export-all-link a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
 .repository-card {
   display: block;
   background: var(--surface);
