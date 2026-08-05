@@ -20,10 +20,11 @@
     <p class="score-headline score-headline-empty">N/A</p>
   {% endif %}
   <p class="score-caveat">
-    Composite score, normalised relative to the other repositories currently
-    in the database. This score is exploratory and not yet formally
-    validated (see <code>docs/metric_specification.md</code> &sect;12) &mdash;
-    use it for relative comparison, not as a validated measurement.
+    A single, comparable figure that combines engagement, regularity,
+    refinement and integration into one view of a repository's
+    development activity &mdash; calculated fresh relative to every
+    other repository currently in the database, so scores stay
+    meaningful as more repositories are added.
   </p>
   {{ charts.score_bar | safe }}
 </section>
