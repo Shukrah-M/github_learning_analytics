@@ -360,9 +360,72 @@ indicator. All charts are rendered as inline SVG with no
 external/CDN dependency, so the page looks and works the same whether
 it is loaded locally or over a phone's browser.
 
-Because the dashboard is open to anyone who can reach it, only run it
-on a trusted local network — it is not designed to be exposed on the
-public internet.
+The dashboard is open to anyone who can reach it — there's no login.
+Running it locally, that means your trusted network only. If you
+deploy it publicly (see below), the app has some protection against
+abuse (rate limiting on adding repositories, debug mode off by
+default), but it's still an unauthenticated app that anyone with the
+link can use — keep that in mind before sharing it widely.
+
+---
+
+## Deploying Publicly
+
+The source is public at
+[github.com/Shukrah-M/github_learning_analytics](https://github.com/Shukrah-M/github_learning_analytics)
+— anyone can clone or download it and run it themselves, locally,
+following the steps above.
+
+To make a *running instance* reachable from anywhere (not just your
+local network), it needs real hosting. **Account creation, billing,
+and clicking "Deploy" are steps only you can do** — I can prepare the
+app and give you exact steps, but I can't sign up for a service or
+enter payment details on your behalf.
+
+Recommended: **[Render](https://render.com)** — free tier for the web
+service, handles HTTPS automatically via Let's Encrypt (no more
+manual certificates), and deploys straight from the GitHub repo.
+
+1. **Create a Postgres database.** In the Render dashboard: New →
+   PostgreSQL. Note the connection details it gives you (host, port,
+   database, user, password).
+
+2. **Migrate your local data to it** (optional — skip this if you'd
+   rather start with an empty database and re-extract repositories
+   there). From your own terminal, with your local Postgres running:
+
+   ```bash
+   pg_dump -h localhost -U postgres -d github_learning_analytics -F c -f backup.dump
+   pg_restore -h <render-db-host> -U <render-db-user> -d <render-db-name> backup.dump
+   ```
+
+   (You'll be prompted for each database's password.)
+
+3. **Create a Web Service.** In the Render dashboard: New → Web
+   Service → connect the `github_learning_analytics` GitHub repo.
+   Render will detect the `Procfile` automatically
+   (`gunicorn dashboard.app:app`); no build command changes needed
+   beyond the default `pip install -r requirements.txt`.
+
+4. **Set environment variables** in the Web Service's Settings →
+   Environment tab (enter these directly in Render, not to me):
+
+   | Variable | Value |
+   |---|---|
+   | `GITHUB_TOKEN` | Your GitHub personal access token |
+   | `GITHUB_OWNER` | Default owner for `python app.py` CLI use (optional for the dashboard itself) |
+   | `GitHub_Repository` | Same, optional |
+   | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | From step 1's Render Postgres |
+   | `OBSERVATION_START`, `OBSERVATION_END` | Same fixed window as local, e.g. `2026-01-02T00:00:00Z` / `2026-07-01T00:00:00Z` |
+   | `FLASK_SECRET_KEY` | Generate a **new** one for production — don't reuse your local one: `python -c "import secrets; print(secrets.token_hex(32))"` |
+
+   Leave `FLASK_DEBUG` unset (it defaults to off, which is what you
+   want here).
+
+5. **Deploy.** Render builds and starts the service automatically.
+   Your dashboard will be live at `https://<your-service-name>.onrender.com`
+   with a trusted certificate — no browser warnings, nothing to
+   install on any device.
 
 ---
 
