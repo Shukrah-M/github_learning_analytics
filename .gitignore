@@ -9,3 +9,7 @@ data/github.db
 # docs/public_repository_selection_protocol.md.
 data/pilot_repository_candidates.csv
 data/public_repository_manifest.csv
+
+# Locally generated TLS certificate/key (mkcert). Machine-specific
+# (bound to this host's LAN IP) and the key must never be committed.
+dashboard/certs/

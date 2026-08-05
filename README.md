@@ -256,7 +256,10 @@ another laptop) on the same network.
    (`python -m scripts.train_nlp_classifier` — the dashboard still
    works without this, it just skips the NLP section).
 
-4. Start the dashboard:
+4. Optionally enable HTTPS (see "HTTPS" below). If skipped, the
+   dashboard serves plain HTTP.
+
+5. Start the dashboard:
 
    **Windows (PowerShell):**
 
@@ -270,13 +273,56 @@ another laptop) on the same network.
    python3 dashboard/app.py
    ```
 
-5. Open it:
+6. Open it:
 
-   - On the same machine: `http://127.0.0.1:5000`
+   - On the same machine: `http://127.0.0.1:5000` (or `https://` if
+     HTTPS is enabled)
    - From another device on the same Wi-Fi (e.g. a phone): find this
      machine's local IP address (`ipconfig` on Windows, `ifconfig`
      or `ipconfig getifaddr en0` on macOS) and open
-     `http://<that IP>:5000` in the device's browser.
+     `http://<that IP>:5000` (or `https://`) in the device's browser.
+
+### HTTPS
+
+The dashboard can serve HTTPS using a locally trusted certificate
+generated with [mkcert](https://github.com/FiloSottile/mkcert),
+rather than a self-signed one that triggers browser warnings.
+
+1. Install mkcert (once):
+
+   ```powershell
+   winget install --id FiloSottile.mkcert -e
+   ```
+
+2. Install its local certificate authority — **this changes your
+   system's trusted-certificate store, so run it yourself**:
+
+   ```powershell
+   mkcert -install
+   ```
+
+3. Generate a certificate covering this machine and its LAN IP
+   (replace `10.124.184.253` with the output of `ipconfig`
+   /`ifconfig`):
+
+   ```powershell
+   mkdir dashboard\certs
+   cd dashboard\certs
+   mkcert -cert-file dashboard.pem -key-file dashboard-key.pem localhost 127.0.0.1 ::1 10.124.184.253
+   cd ..\..
+   ```
+
+`dashboard/app.py` automatically serves HTTPS if
+`dashboard/certs/dashboard.pem` and `dashboard-key.pem` exist, and
+falls back to plain HTTP otherwise. These files are machine-specific
+(bound to your LAN IP) and gitignored — regenerate them if you move
+to a different machine or network.
+
+To access it from another device (phone, tablet) **without** a
+browser warning, that device also needs to trust mkcert's root CA:
+copy the file at `mkcert -CAROOT` (a `rootCA.pem`) to the device and
+install it as a trusted certificate. Without that step, other devices
+will still connect over HTTPS but see a one-time warning.
 
 ### Adding repositories
 

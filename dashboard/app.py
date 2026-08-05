@@ -5,9 +5,12 @@ Run with:
 
     python dashboard/app.py
 
-Then open http://127.0.0.1:5000 in a browser, or
-http://<this machine's LAN IP>:5000 from another device (phone,
-tablet, another computer) on the same network.
+Then open https://127.0.0.1:5000 in a browser, or
+https://<this machine's LAN IP>:5000 from another device (phone,
+tablet, another computer) on the same network. If
+dashboard/certs/dashboard.pem and dashboard-key.pem (generated with
+mkcert, see README) aren't present, the server falls back to plain
+HTTP on the same port.
 
 The dashboard is open: no account is needed to browse repositories or
 add new ones via /repositories/new.
@@ -408,5 +411,25 @@ def handle_not_found(_error):
     )
 
 
+CERT_PATH = PROJECT_ROOT / "dashboard" / "certs" / "dashboard.pem"
+KEY_PATH = PROJECT_ROOT / "dashboard" / "certs" / "dashboard-key.pem"
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    ssl_context = None
+
+    if CERT_PATH.exists() and KEY_PATH.exists():
+        ssl_context = (str(CERT_PATH), str(KEY_PATH))
+    else:
+        print(
+            "No TLS certificate found at dashboard/certs/ — running "
+            "over plain HTTP. See README for how to generate one "
+            "with mkcert."
+        )
+
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True,
+        ssl_context=ssl_context,
+    )
