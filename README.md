@@ -136,6 +136,7 @@ GitHub-Learning-Analytics-System/
 │
 ├── dashboard/
 │   ├── app.py
+│   ├── csrf.py
 │   ├── charts.py
 │   ├── templates/
 │   └── static/css/style.css
@@ -154,7 +155,8 @@ GitHub-Learning-Analytics-System/
 │   ├── repository.py
 │   ├── commits.py
 │   ├── issues.py
-│   └── pull_requests.py
+│   ├── pull_requests.py
+│   └── pipeline.py
 │
 ├── app.py
 ├── config.py
@@ -176,6 +178,8 @@ GitHub-Learning-Analytics-System/
 | `database/database.py` | Creates the PostgreSQL connection and database sessions |
 | `database/models.py` | Defines the SQLAlchemy database models |
 | `database/repository.py` | Saves and updates extracted records in PostgreSQL |
+| `extractor/pipeline.py` | Shared extract-and-save sequence, used by `app.py` and the dashboard's "Add repository" form |
+| `dashboard/csrf.py` | CSRF token helpers for the "Add repository" form |
 
 ---
 
@@ -240,12 +244,19 @@ another laptop) on the same network.
    pip install -r requirements.txt
    ```
 
-2. Make sure the database has at least one extracted repository
-   (`python app.py`) and, optionally, a trained NLP model
+2. Add `FLASK_SECRET_KEY` to `.env` if it isn't already there:
+
+   ```powershell
+   python -c "import secrets; print(secrets.token_hex(32))"
+   ```
+
+   and put the output in `.env` as `FLASK_SECRET_KEY=<value>`.
+
+3. Optionally train the NLP model
    (`python -m scripts.train_nlp_classifier` — the dashboard still
    works without this, it just skips the NLP section).
 
-3. Start the dashboard:
+4. Start the dashboard:
 
    **Windows (PowerShell):**
 
@@ -259,7 +270,7 @@ another laptop) on the same network.
    python3 dashboard/app.py
    ```
 
-4. Open it:
+5. Open it:
 
    - On the same machine: `http://127.0.0.1:5000`
    - From another device on the same Wi-Fi (e.g. a phone): find this
@@ -267,13 +278,25 @@ another laptop) on the same network.
      or `ipconfig getifaddr en0` on macOS) and open
      `http://<that IP>:5000` in the device's browser.
 
-The dashboard lists all repositories currently in the database and,
-for each one, shows its behavioural metrics, the experimentation-
-intensity score breakdown, a commit-activity sparkline, and the NLP
-category distribution with a learning-quality indicator. All charts
-are rendered as inline SVG with no external/CDN dependency, so the
-page looks and works the same whether it is loaded locally or over a
-phone's browser.
+### Adding repositories
+
+The dashboard is open — no account or login is needed. Anyone who can
+reach the page can browse every repository and add new ones through
+the "Add repository" button rather than editing `.env` — enter a
+GitHub owner and repository name, and the server extracts it using the
+`GITHUB_TOKEN` already configured in `.env`. Every repository added
+this way is visible to everyone who opens the dashboard.
+
+For each repository, the dashboard shows its behavioural metrics, the
+experimentation-intensity score breakdown, a commit-activity
+sparkline, and the NLP category distribution with a learning-quality
+indicator. All charts are rendered as inline SVG with no
+external/CDN dependency, so the page looks and works the same whether
+it is loaded locally or over a phone's browser.
+
+Because the dashboard is open to anyone who can reach it, only run it
+on a trusted local network — it is not designed to be exposed on the
+public internet.
 
 ---
 

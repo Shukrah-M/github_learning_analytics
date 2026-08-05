@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import dashboard.app as dashboard_app_module
 from dashboard.app import app
+from extractor.github_api import GitHubAPIError
 
 
 def make_repository(
@@ -21,14 +22,6 @@ def make_repository(
     )
 
 
-def make_session_local(monkeypatch):
-    monkeypatch.setattr(
-        dashboard_app_module,
-        "SessionLocal",
-        lambda: MagicMock(close=lambda: None),
-    )
-
-
 def make_metrics():
     return {
         "commit_frequency_per_week": 2.0,
@@ -44,6 +37,21 @@ def make_metrics():
         "reviewed_pull_request_ratio": 1.0,
         "mean_pull_request_cycle_days": 0.5,
     }
+
+
+def make_session_local(monkeypatch):
+    monkeypatch.setattr(
+        dashboard_app_module,
+        "SessionLocal",
+        lambda: MagicMock(close=lambda: None),
+    )
+
+
+def get_csrf_token(client, path):
+    client.get(path)
+
+    with client.session_transaction() as recorded_session:
+        return recorded_session["_csrf_token"]
 
 
 def test_index_route_lists_repositories(monkeypatch):
@@ -80,7 +88,7 @@ def test_index_route_renders_empty_state(monkeypatch):
     response = client.get("/")
 
     assert response.status_code == 200
-    assert b"No repositories found" in response.data
+    assert b"No repositories yet" in response.data
 
 
 def test_repository_detail_route_renders_metrics(monkeypatch, tmp_path):
@@ -137,9 +145,7 @@ def test_repository_detail_route_renders_metrics(monkeypatch, tmp_path):
     assert b"NLP model not trained yet" in response.data
 
 
-def test_repository_detail_route_404_for_unknown_repository(
-    monkeypatch,
-):
+def test_repository_detail_route_404_for_unknown_repository(monkeypatch):
     make_session_local(monkeypatch)
 
     monkeypatch.setattr(
@@ -152,3 +158,101 @@ def test_repository_detail_route_404_for_unknown_repository(
     response = client.get("/repository/999")
 
     assert response.status_code == 404
+
+
+def test_add_repository_get_renders_form(monkeypatch):
+    client = app.test_client()
+    response = client.get("/repositories/new")
+
+    assert response.status_code == 200
+    assert b"Add a repository" in response.data
+
+
+def test_add_repository_post_success_redirects_to_detail(monkeypatch):
+    saved_repository = make_repository(
+        repository_id=5, owner="torvalds", name="linux"
+    )
+
+    make_session_local(monkeypatch)
+    monkeypatch.setattr(
+        dashboard_app_module,
+        "run_extraction_pipeline",
+        lambda session, owner, repo: {"repository": saved_repository},
+    )
+
+    client = app.test_client()
+    csrf_token = get_csrf_token(client, "/repositories/new")
+
+    response = client.post(
+        "/repositories/new",
+        data={
+            "owner": "torvalds",
+            "repo": "linux",
+            "csrf_token": csrf_token,
+        },
+    )
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/repository/5")
+
+
+def test_add_repository_post_rejects_invalid_csrf_token(monkeypatch):
+    client = app.test_client()
+
+    response = client.post(
+        "/repositories/new",
+        data={
+            "owner": "torvalds",
+            "repo": "linux",
+            "csrf_token": "wrong-token",
+        },
+    )
+
+    assert response.status_code == 400
+
+
+def test_add_repository_post_shows_friendly_error_for_missing_repository(
+    monkeypatch,
+):
+    make_session_local(monkeypatch)
+
+    def raise_not_found(session, owner, repo):
+        raise GitHubAPIError(404, "not found")
+
+    monkeypatch.setattr(
+        dashboard_app_module,
+        "run_extraction_pipeline",
+        raise_not_found,
+    )
+
+    client = app.test_client()
+    csrf_token = get_csrf_token(client, "/repositories/new")
+
+    response = client.post(
+        "/repositories/new",
+        data={
+            "owner": "nobody",
+            "repo": "missing",
+            "csrf_token": csrf_token,
+        },
+    )
+
+    assert response.status_code == 200
+    assert b"Repository not found" in response.data
+
+
+def test_add_repository_post_rejects_invalid_owner_name(monkeypatch):
+    client = app.test_client()
+    csrf_token = get_csrf_token(client, "/repositories/new")
+
+    response = client.post(
+        "/repositories/new",
+        data={
+            "owner": "not a valid owner!",
+            "repo": "linux",
+            "csrf_token": csrf_token,
+        },
+    )
+
+    assert response.status_code == 200
+    assert b"must be valid GitHub names" in response.data

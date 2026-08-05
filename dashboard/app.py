@@ -8,10 +8,15 @@ Run with:
 Then open http://127.0.0.1:5000 in a browser, or
 http://<this machine's LAN IP>:5000 from another device (phone,
 tablet, another computer) on the same network.
+
+The dashboard is open: no account is needed to browse repositories or
+add new ones via /repositories/new.
 """
 
 from __future__ import annotations
 
+import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -21,7 +26,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from flask import Flask, abort, render_template  # noqa: E402
+from dotenv import load_dotenv  # noqa: E402
+from flask import Flask, abort, redirect, render_template, request, url_for  # noqa: E402
 from sqlalchemy.exc import SQLAlchemyError  # noqa: E402
 
 from analytics.data_access import (  # noqa: E402
@@ -40,12 +46,29 @@ from dashboard.charts import (  # noqa: E402
     render_donut_chart,
     render_sparkline,
 )
+from dashboard.csrf import generate_csrf_token, validate_csrf_token  # noqa: E402
 from database.database import SessionLocal  # noqa: E402
+from extractor.github_api import GitHubAPIError  # noqa: E402
+from extractor.pipeline import run_extraction_pipeline  # noqa: E402
 
+
+load_dotenv()
 
 MODEL_PATH = PROJECT_ROOT / "models" / "nlp_classifier.joblib"
 
+FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
+
+if not FLASK_SECRET_KEY:
+    raise RuntimeError(
+        "FLASK_SECRET_KEY is not set. Add one to .env, e.g. by running:\n"
+        '  python -c "import secrets; print(secrets.token_hex(32))"\n'
+        "and adding FLASK_SECRET_KEY=<the output> to .env."
+    )
+
+GITHUB_NAME_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{1,100}$")
+
 app = Flask(__name__)
+app.secret_key = FLASK_SECRET_KEY
 
 
 def format_metric(value: Any, kind: str) -> str:
@@ -172,18 +195,101 @@ def build_weekly_commit_counts(commits) -> list[int]:
     return [buckets[key] for key in sorted(buckets)]
 
 
-@app.route("/")
-def index():
-    session = SessionLocal()
+def describe_github_error(error: GitHubAPIError) -> str:
+    """Translate a GitHub API error into a user-facing message."""
+    if error.status_code == 404:
+        return (
+            "Repository not found. Check the owner and repository name "
+            "(private repositories need access from the GitHub token "
+            "configured in .env)."
+        )
+
+    if error.status_code in (401, 403):
+        return (
+            "GitHub rejected the request (invalid token or rate limit "
+            "exceeded). Check GITHUB_TOKEN in .env."
+        )
+
+    return f"GitHub API error ({error.status_code}). Please try again."
+
+
+@app.route("/repositories/new", methods=["GET", "POST"])
+def add_repository():
+    if request.method == "GET":
+        return render_template(
+            "add_repository.html",
+            csrf_token=generate_csrf_token(),
+            error=None,
+            owner="",
+            repo="",
+        )
+
+    if not validate_csrf_token(request.form.get("csrf_token")):
+        abort(400)
+
+    owner = request.form.get("owner", "").strip()
+    repo = request.form.get("repo", "").strip()
+
+    if not GITHUB_NAME_PATTERN.match(owner) or not GITHUB_NAME_PATTERN.match(
+        repo
+    ):
+        return render_template(
+            "add_repository.html",
+            csrf_token=generate_csrf_token(),
+            error=(
+                "Owner and repository must be valid GitHub names "
+                "(letters, numbers, '.', '_', '-')."
+            ),
+            owner=owner,
+            repo=repo,
+        )
+
+    db_session = SessionLocal()
 
     try:
-        repositories = get_all_repositories(session)
+        try:
+            summary = run_extraction_pipeline(db_session, owner, repo)
+        except GitHubAPIError as error:
+            return render_template(
+                "add_repository.html",
+                csrf_token=generate_csrf_token(),
+                error=describe_github_error(error),
+                owner=owner,
+                repo=repo,
+            )
+
+        return redirect(
+            url_for(
+                "repository_detail",
+                repository_id=summary["repository"].id,
+            )
+        )
+
+    except SQLAlchemyError as error:
+        return (
+            render_template(
+                "error.html",
+                message=f"Could not reach the database: {error}",
+            ),
+            500,
+        )
+
+    finally:
+        db_session.close()
+
+
+@app.route("/")
+def index():
+    db_session = SessionLocal()
+
+    try:
+        repositories = get_all_repositories(db_session)
 
         rows = [
             {
                 "repository": repository,
                 "commit_count": len(
-                    get_commits(session, repository.id)
+                    get_commits(db_session, repository.id)
                 ),
             }
             for repository in repositories
@@ -201,20 +307,20 @@ def index():
         )
 
     finally:
-        session.close()
+        db_session.close()
 
 
 @app.route("/repository/<int:repository_id>")
 def repository_detail(repository_id: int):
-    session = SessionLocal()
+    db_session = SessionLocal()
 
     try:
-        repository = get_repository_by_id(session, repository_id)
+        repository = get_repository_by_id(db_session, repository_id)
 
         if repository is None:
             abort(404)
 
-        all_repositories = get_all_repositories(session)
+        all_repositories = get_all_repositories(db_session)
 
         repository_metrics = {
             repo.id: analyse_repository(repo.id)
@@ -226,7 +332,7 @@ def repository_detail(repository_id: int):
         metrics = repository_metrics[repository_id]
         score = scores[repository_id]
 
-        commits = get_commits(session, repository_id)
+        commits = get_commits(db_session, repository_id)
         weekly_commit_counts = build_weekly_commit_counts(commits)
 
         nlp_result = None
@@ -238,7 +344,7 @@ def repository_detail(repository_id: int):
                 "Run: python -m scripts.train_nlp_classifier"
             )
         else:
-            texts = get_repository_texts(session, repository_id)
+            texts = get_repository_texts(db_session, repository_id)
 
             if not texts:
                 nlp_error = (
@@ -288,7 +394,7 @@ def repository_detail(repository_id: int):
         )
 
     finally:
-        session.close()
+        db_session.close()
 
 
 @app.errorhandler(404)

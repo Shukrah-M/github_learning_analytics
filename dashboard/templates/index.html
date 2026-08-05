@@ -3,8 +3,13 @@
 {% block title %}Repositories - GitHub Learning Analytics{% endblock %}
 
 {% block content %}
-<h1>Repositories</h1>
-<p class="page-intro">Select a repository to view its behavioural metrics, experimentation-intensity score and NLP text classification.</p>
+<div class="page-header-row">
+  <div>
+    <h1>Repositories</h1>
+    <p class="page-intro">Select a repository to view its behavioural metrics, experimentation-intensity score and NLP text classification.</p>
+  </div>
+  <a class="button-link" href="{{ url_for('add_repository') }}">+ Add repository</a>
+</div>
 
 {% if rows %}
 <div class="repository-grid">
@@ -17,6 +22,6 @@
   {% endfor %}
 </div>
 {% else %}
-<p class="empty-state">No repositories found. Run <code>python app.py</code> to extract a repository first.</p>
+<p class="empty-state">No repositories yet. Click "Add repository" above to extract one from GitHub.</p>
 {% endif %}
 {% endblock %}

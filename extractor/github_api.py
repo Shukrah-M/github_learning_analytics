@@ -8,6 +8,14 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 BASE_URL = "https://api.github.com"
 
 
+class GitHubAPIError(Exception):
+    """A non-200 response from the GitHub API, with the status code attached."""
+
+    def __init__(self, status_code, message):
+        super().__init__(message)
+        self.status_code = status_code
+
+
 class GitHubAPIClient:
     def __init__(self):
         if not GITHUB_TOKEN:
@@ -29,8 +37,9 @@ class GitHubAPIClient:
         )
 
         if response.status_code != 200:
-            raise Exception(
-                f"GitHub API error: {response.status_code} - {response.text}"
+            raise GitHubAPIError(
+                response.status_code,
+                f"GitHub API error: {response.status_code} - {response.text}",
             )
 
         return response.json()

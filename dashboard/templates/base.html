@@ -9,6 +9,9 @@
 <body>
   <header class="site-header">
     <a class="site-title" href="{{ url_for('index') }}">GitHub-Based Learning Analytics</a>
+    <nav class="site-nav">
+      <a href="{{ url_for('add_repository') }}">+ Add repository</a>
+    </nav>
   </header>
   <main class="site-main">
     {% block content %}{% endblock %}
