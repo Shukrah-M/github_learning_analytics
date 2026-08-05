@@ -167,6 +167,36 @@ h3 {
   margin-top: 0.75rem;
 }
 
+.value-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.value-panel h2 {
+  margin-top: 0;
+}
+
+.value-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.value-list li {
+  margin-bottom: 0.5rem;
+  color: var(--text-muted);
+}
+
+.value-list li:last-child {
+  margin-bottom: 0;
+}
+
+.value-list strong {
+  color: var(--text);
+}
+
 .repository-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

@@ -11,6 +11,16 @@
   <a class="button-link" href="{{ url_for('add_repository') }}">+ Add repository</a>
 </div>
 
+<section class="value-panel">
+  <h2>Why this matters</h2>
+  <p class="page-intro">Turning raw GitHub activity into evidence of entrepreneurial development usually means reading commit histories, issues and pull requests by hand. This dashboard automates that:</p>
+  <ul class="value-list">
+    <li><strong>Behavioural metrics</strong> quantify iteration, persistence, problem-resolution and collaboration directly from commits, issues and pull requests.</li>
+    <li><strong>The experimentation-intensity score</strong> gives one comparable figure per repository, so projects can be ranked and compared at a glance.</li>
+    <li><strong>Automated text classification</strong> surfaces problem-solving, experimentation and refinement in commit messages, issue threads and reviews far faster than reading them one by one.</li>
+  </ul>
+</section>
+
 {% if rows %}
 <div class="repository-grid">
   {% for row in rows %}

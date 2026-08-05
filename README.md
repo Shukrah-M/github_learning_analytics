@@ -318,11 +318,31 @@ falls back to plain HTTP otherwise. These files are machine-specific
 (bound to your LAN IP) and gitignored — regenerate them if you move
 to a different machine or network.
 
-To access it from another device (phone, tablet) **without** a
-browser warning, that device also needs to trust mkcert's root CA:
-copy the file at `mkcert -CAROOT` (a `rootCA.pem`) to the device and
-install it as a trusted certificate. Without that step, other devices
-will still connect over HTTPS but see a one-time warning.
+#### Trusting it on other devices (phone, tablet, another laptop)
+
+Without this step, other devices on your Wi-Fi can still reach the
+dashboard over HTTPS, they'll just see a one-time certificate
+warning. To get a clean padlock everywhere, copy
+`mkcert -CAROOT`'s `rootCA.pem` (the CA's **public** certificate only
+— never share `rootCA-key.pem`) to each device and install it as a
+trusted root certificate:
+
+- **iOS**: AirDrop or email `rootCA.pem` to the device, open it (installs
+  a profile), then go to Settings → General → VPN & Device Management
+  and install the profile, then Settings → General → About →
+  Certificate Trust Settings and enable full trust for it.
+- **Android**: send the file to the device, open Settings → Security
+  → Encryption & credentials → Install a certificate → CA certificate,
+  and select the file.
+- **macOS**: double-click `rootCA.pem` to add it to Keychain Access,
+  then open it in Keychain Access and set "Always Trust" under the
+  Trust section.
+- **Windows**: double-click `rootCA.pem` → Install Certificate → Local
+  Machine → place it in "Trusted Root Certification Authorities".
+
+This only affects devices you explicitly install it on — it does not
+make the dashboard reachable from anywhere it wasn't already (still
+LAN-only, per the network it's running on).
 
 ### Adding repositories
 
