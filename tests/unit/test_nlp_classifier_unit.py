@@ -5,6 +5,7 @@ from analytics.nlp.classifier import (
     build_pipeline,
     calculate_learning_quality_indicator,
     clean_text,
+    interpret_cohen_kappa,
     oversample_training_rows,
     predict_repository_texts,
     train_and_evaluate,
@@ -153,6 +154,15 @@ def test_train_and_evaluate_and_predict_round_trip(tmp_path):
         "complement_nb",
     }
     assert (results_directory / "model_comparison.csv").exists()
+    assert -1.0 <= results["cohen_kappa"] <= 1.0
+    assert results["cohen_kappa_interpretation"] in {
+        "poor (worse than chance)",
+        "slight",
+        "fair",
+        "moderate",
+        "substantial",
+        "almost perfect",
+    }
 
     prediction = predict_repository_texts(
         ["refactor the module for clarity"],
@@ -168,3 +178,23 @@ def test_train_and_evaluate_and_predict_round_trip(tmp_path):
         "refinement",
         "none",
     }
+
+
+@pytest.mark.parametrize(
+    "kappa,expected",
+    [
+        (-0.1, "poor (worse than chance)"),
+        (0.0, "slight"),
+        (0.20, "slight"),
+        (0.21, "fair"),
+        (0.40, "fair"),
+        (0.41, "moderate"),
+        (0.60, "moderate"),
+        (0.61, "substantial"),
+        (0.80, "substantial"),
+        (0.81, "almost perfect"),
+        (1.0, "almost perfect"),
+    ],
+)
+def test_interpret_cohen_kappa_matches_landis_koch_scale(kappa, expected):
+    assert interpret_cohen_kappa(kappa) == expected

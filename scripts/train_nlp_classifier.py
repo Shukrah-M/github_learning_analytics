@@ -66,6 +66,11 @@ def main() -> None:
         f"Mean weighted-F1:        "
         f"{results['weighted_f1_mean']:.3f}"
     )
+    print(
+        f"Cohen's kappa:           "
+        f"{results['cohen_kappa']:.3f} "
+        f"({results['cohen_kappa_interpretation']})"
+    )
 
     print("-" * 70)
     print("Model comparison:")

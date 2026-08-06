@@ -13,6 +13,8 @@
     "accuracy_mean": 0.4415686274509804,
     "macro_f1_mean": 0.34035884537185923,
     "weighted_f1_mean": 0.43076427800346007,
+    "cohen_kappa": 0.1936974789915965,
+    "cohen_kappa_interpretation": "slight",
     "model_comparison_rows": [
         {
             "model": "logistic_regression",

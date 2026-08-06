@@ -21,6 +21,7 @@ from sklearn.metrics import (
     ConfusionMatrixDisplay,
     accuracy_score,
     classification_report,
+    cohen_kappa_score,
     f1_score,
 )
 from sklearn.model_selection import RepeatedStratifiedKFold, StratifiedKFold
@@ -497,6 +498,25 @@ def cross_val_predict_with_oversampling(
     return predictions.tolist()
 
 
+def interpret_cohen_kappa(kappa: float) -> str:
+    """
+    Label a kappa value using the Landis & Koch (1977) benchmark
+    scale, the standard reference for interpreting chance-corrected
+    agreement.
+    """
+    if kappa < 0:
+        return "poor (worse than chance)"
+    if kappa <= 0.20:
+        return "slight"
+    if kappa <= 0.40:
+        return "fair"
+    if kappa <= 0.60:
+        return "moderate"
+    if kappa <= 0.80:
+        return "substantial"
+    return "almost perfect"
+
+
 def train_and_evaluate(
     training_csv: Path,
     model_path: Path,
@@ -588,6 +608,16 @@ def train_and_evaluate(
         n_splits=number_of_folds,
     )
 
+    # Chance-corrected agreement between the classifier and the human
+    # gold-standard labels, on the same out-of-fold predictions used
+    # for the report/confusion matrix above. Unlike raw accuracy, this
+    # is not inflated by the labels' uneven class sizes.
+    cohen_kappa = cohen_kappa_score(
+        frame["final_label"],
+        cross_validated_predictions,
+        labels=LABELS,
+    )
+
     report = classification_report(
         frame["final_label"],
         cross_validated_predictions,
@@ -659,6 +689,8 @@ def train_and_evaluate(
         "accuracy_mean": best_scores["accuracy_mean"],
         "macro_f1_mean": best_scores["macro_f1_mean"],
         "weighted_f1_mean": best_scores["weighted_f1_mean"],
+        "cohen_kappa": float(cohen_kappa),
+        "cohen_kappa_interpretation": interpret_cohen_kappa(cohen_kappa),
         "model_comparison_rows": comparison_rows,
         "scikit_learn_version":
             sklearn.__version__,
