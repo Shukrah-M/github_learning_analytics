@@ -332,22 +332,48 @@ h3 {
   margin-top: 0;
 }
 
-.category-list {
-  list-style: none;
-  padding: 0;
-  margin: 0.5rem 0;
-  min-width: 220px;
-}
-
-.category-list li {
+.donut-block {
   display: flex;
-  justify-content: space-between;
-  padding: 0.2rem 0;
-  border-bottom: 1px solid var(--border);
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
 }
 
-.category-count {
+.chart-donut {
+  max-width: 220px;
+}
+
+.donut-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.donut-legend-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  margin-top: 0.3rem;
+  flex-shrink: 0;
+}
+
+.legend-label {
   font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.legend-value {
+  color: var(--text-muted);
+  font-size: 0.85rem;
 }
 
 .empty-state {
@@ -384,6 +410,17 @@ code {
   font-size: 20px;
   fill: var(--text);
   font-weight: 600;
+}
+
+.chart-center-value {
+  font-size: 26px;
+  fill: var(--text);
+  font-weight: 700;
+}
+
+.chart-center-caption {
+  font-size: 11px;
+  fill: var(--text-muted);
 }
 
 .sparkline-area {

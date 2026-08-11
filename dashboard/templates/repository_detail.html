@@ -21,7 +21,7 @@
   {% endif %}
   <p class="score-caveat">
     A single, comparable figure that combines engagement, regularity,
-    refinement and integration into one view of a repository's
+    issue refinement and integration into one view of a repository's
     development activity &mdash; calculated fresh relative to every
     other repository currently in the database, so scores stay
     meaningful as more repositories are added.
@@ -54,15 +54,23 @@
   <p class="empty-state">{{ nlp_error }}</p>
   {% elif nlp_result %}
   <div class="nlp-summary">
-    {{ charts.nlp_donut | safe }}
+    <div class="donut-block">
+      {{ charts.nlp_donut | safe }}
+      <div class="donut-legend">
+        {% for row in category_rows %}
+        <div class="donut-legend-item">
+          <span class="legend-dot" style="background-color: {{ row.color }};"></span>
+          <div class="legend-text">
+            <div class="legend-label">{{ row.label }}</div>
+            <div class="legend-value">{{ "%.0f"|format(row.percent) }}% ({{ row.count }})</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
     <div class="nlp-stats">
       <p class="nlp-headline">{{ "%.1f"|format(nlp_result.learning_quality_indicator) }}%
         of classified text falls into a substantive learning-indicator category.</p>
-      <ul class="category-list">
-        {% for label, count in nlp_result.category_distribution.items() %}
-        <li><span class="category-name">{{ label }}</span><span class="category-count">{{ count }}</span></li>
-        {% endfor %}
-      </ul>
       <p class="nlp-caveat">
         Classifying repository text this way surfaces patterns of
         problem-solving, experimentation and refinement across

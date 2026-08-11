@@ -15,13 +15,24 @@ from typing import Sequence
 BAR_COLOR = "#3b82f6"
 BAR_COLOR_MISSING = "#cbd5e1"
 
-DONUT_COLORS = [
-    "#3b82f6",  # problem_identification
-    "#10b981",  # experimentation
-    "#f59e0b",  # reflection
-    "#8b5cf6",  # refinement
-    "#94a3b8",  # none
-]
+DONUT_COLOR_MAP = {
+    "problem_identification": "#3b82f6",
+    "experimentation": "#10b981",
+    "reflection": "#f59e0b",
+    "refinement": "#8b5cf6",
+    "none": "#94a3b8",
+}
+DONUT_FALLBACK_COLOR = "#cbd5e1"
+
+
+def donut_color(label: str) -> str:
+    """Look up the fixed colour for an NLP category label."""
+    return DONUT_COLOR_MAP.get(label, DONUT_FALLBACK_COLOR)
+
+
+def format_category_label(label: str) -> str:
+    """Turn a raw category key like 'problem_identification' into 'Problem Identification'."""
+    return label.replace("_", " ").title()
 
 
 def render_bar_chart(
@@ -78,7 +89,7 @@ def render_donut_chart(
     total = sum(distribution.values())
     center = size / 2
     radius = size * 0.36
-    stroke_width = size * 0.18
+    stroke_width = size * 0.22
 
     if total == 0:
         return (
@@ -91,35 +102,42 @@ def render_donut_chart(
         )
 
     circumference = 2 * 3.141592653589793 * radius
+    active_segments = [
+        (label, count) for label, count in distribution.items() if count > 0
+    ]
+    # A small visible gap between segments, matching a "spoked" donut look.
+    gap = circumference * 0.012 if len(active_segments) > 1 else 0.0
+
     offset = 0.0
     segments: list[str] = []
 
-    for index, (label, count) in enumerate(distribution.items()):
-        if count == 0:
-            continue
-
+    for label, count in active_segments:
         fraction = count / total
-        segment_length = circumference * fraction
-        color = DONUT_COLORS[index % len(DONUT_COLORS)]
+        raw_length = circumference * fraction
+        segment_length = max(raw_length - gap, 0.0)
+        color = donut_color(label)
 
         segments.append(
             f'<circle cx="{center}" cy="{center}" r="{radius}" '
             f'fill="none" stroke="{color}" stroke-width="{stroke_width}" '
+            f'stroke-linecap="round" '
             f'stroke-dasharray="{segment_length:.2f} '
             f'{circumference - segment_length:.2f}" '
             f'stroke-dashoffset="{-offset:.2f}" '
             f'transform="rotate(-90 {center} {center})">'
-            f"<title>{escape(label)}: {count}</title>"
+            f"<title>{escape(format_category_label(label))}: {count}</title>"
             f"</circle>"
         )
-        offset += segment_length
+        offset += raw_length
 
     return (
         f'<svg viewBox="0 0 {size} {size}" class="chart chart-donut" '
         f'role="img" aria-label="NLP category distribution donut chart">'
         + "".join(segments)
-        + f'<text x="{center}" y="{center}" class="chart-center-label" '
-        f'text-anchor="middle">{total}</text>'
+        + f'<text x="{center}" y="{center - size * 0.045:.1f}" '
+        f'class="chart-center-value" text-anchor="middle">{total}</text>'
+        + f'<text x="{center}" y="{center + size * 0.085:.1f}" '
+        f'class="chart-center-caption" text-anchor="middle">Total</text>'
         + "</svg>"
     )
 

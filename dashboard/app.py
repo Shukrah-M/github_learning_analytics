@@ -54,6 +54,8 @@ from analytics.nlp.classifier import predict_repository_texts  # noqa: E402
 from analytics.nlp.repository_texts import get_repository_texts  # noqa: E402
 from analytics.repository_analysis import analyse_repository  # noqa: E402
 from dashboard.charts import (  # noqa: E402
+    donut_color,
+    format_category_label,
     render_bar_chart,
     render_donut_chart,
     render_sparkline,
@@ -435,7 +437,7 @@ def repository_detail(repository_id: int):
                 [
                     ("Engagement", score["engagement_score"]),
                     ("Regularity", score["regularity_score"]),
-                    ("Refinement", score["refinement_score"]),
+                    ("Issue Refinement", score["refinement_score"]),
                     ("Integration", score["integration_score"]),
                 ]
             ),
@@ -447,6 +449,26 @@ def repository_detail(repository_id: int):
             "commit_sparkline": render_sparkline(weekly_commit_counts),
         }
 
+        category_rows = []
+
+        if nlp_result:
+            distribution = nlp_result["category_distribution"]
+            total_classified = sum(distribution.values())
+
+            category_rows = [
+                {
+                    "label": format_category_label(label),
+                    "count": count,
+                    "percent": (
+                        count / total_classified * 100
+                        if total_classified
+                        else 0
+                    ),
+                    "color": donut_color(label),
+                }
+                for label, count in distribution.items()
+            ]
+
         return render_template(
             "repository_detail.html",
             repository=analysis["repository"],
@@ -454,6 +476,7 @@ def repository_detail(repository_id: int):
             score=score,
             nlp_result=nlp_result,
             nlp_error=analysis["nlp_error"],
+            category_rows=category_rows,
             charts=charts,
         )
 
