@@ -37,18 +37,38 @@ def format_category_label(label: str) -> str:
 
 def render_bar_chart(
     items: Sequence[tuple[str, float | None]],
+    tooltips: dict[str, str] | None = None,
     width: int = 420,
     height: int = 200,
 ) -> str:
     """Render a horizontal 0-1 bar chart (e.g. the four sub-scores)."""
+    tooltips = tooltips or {}
+    axis_height = 20
+
     if not items:
         return f'<svg viewBox="0 0 {width} {height}" class="chart chart-bar"></svg>'
 
     label_width = 120
     value_width = 50
     chart_width = width - label_width - value_width
-    row_height = height / len(items)
+    plot_height = height - axis_height
+    row_height = plot_height / len(items)
     parts: list[str] = []
+
+    # Vertical gridlines at 0 / 0.5 / 1 make the 0-1 scale readable
+    # across every row at a glance, rather than relying solely on the
+    # printed value.
+    for fraction in (0.0, 0.5, 1.0):
+        grid_x = label_width + chart_width * fraction
+        parts.append(
+            f'<line x1="{grid_x:.1f}" y1="0" x2="{grid_x:.1f}" '
+            f'y2="{plot_height:.1f}" class="chart-gridline" />'
+        )
+        parts.append(
+            f'<text x="{grid_x:.1f}" y="{plot_height + 14:.1f}" '
+            f'class="chart-axis-label" text-anchor="middle">'
+            f"{fraction:g}</text>"
+        )
 
     for index, (label, value) in enumerate(items):
         y = index * row_height + row_height * 0.28
@@ -58,6 +78,7 @@ def render_bar_chart(
         bar_width = chart_width * display_value
         color = BAR_COLOR_MISSING if value is None else BAR_COLOR
         value_text = "N/A" if value is None else f"{value:.2f}"
+        tooltip = escape(tooltips.get(label, label))
 
         parts.append(
             f'<text x="0" y="{y + bar_height * 0.75:.1f}" '
@@ -67,7 +88,9 @@ def render_bar_chart(
             f'class="chart-track" rx="3" />'
             f'<rect x="{label_width}" y="{y:.1f}" '
             f'width="{bar_width:.1f}" height="{bar_height:.1f}" '
-            f'fill="{color}" rx="3" />'
+            f'fill="{color}" rx="3">'
+            f"<title>{tooltip}</title>"
+            f"</rect>"
             f'<text x="{label_width + chart_width + 8}" '
             f'y="{y + bar_height * 0.75:.1f}" '
             f'class="chart-value">{value_text}</text>'

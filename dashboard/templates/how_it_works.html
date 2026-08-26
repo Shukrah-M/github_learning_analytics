@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}How the scores work - GitHub Learning Analytics{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{{ url_for('index') }}">&larr; All repositories</a>
+
+<section class="page-header-row">
+  <div>
+    <h1>How the scores work</h1>
+    <p class="page-intro">
+      What this dashboard measures, how each score is calculated, and
+      how confidently you should read it &mdash; including where the
+      analysis is still limited.
+    </p>
+  </div>
+</section>
+
+<section class="info-section">
+  <h2>What this system does</h2>
+  <p>
+    {{ project_title }} turns raw GitHub repository activity into
+    interpretable indicators of entrepreneurial development behaviour.
+    It does not measure code quality, project success, or prove that
+    learning happened &mdash; it surfaces behavioural evidence
+    (commits, issues, pull requests and their text) that can be
+    reviewed alongside other evidence.
+  </p>
+  <p class="page-intro">
+    Pipeline: GitHub activity is extracted for a repository &rarr;
+    cleaned and stored &rarr; summarised into behavioural metrics
+    &rarr; repository text is classified by the NLP component &rarr;
+    both are combined into the two scores below and shown on each
+    repository's page alongside the raw metrics they're built from.
+  </p>
+</section>
+
+<section class="info-section">
+  <h2>The four behavioural dimensions</h2>
+  <p class="page-intro">
+    The Experimentation Intensity Score is built from four
+    dimensions. Each is calculated only when there's enough data to
+    support it &mdash; otherwise it's shown as N/A rather than guessed.
+  </p>
+  <div class="dimension-grid">
+    <div class="dimension-card">
+      <h3>Engagement</h3>
+      <p>Commit frequency and the share of days with recorded activity.</p>
+      <p class="dimension-evidence">Evidence of: sustained iterative effort.</p>
+    </div>
+    <div class="dimension-card">
+      <h3>Regularity</h3>
+      <p>How evenly spaced commits are, and the longest gap between them.</p>
+      <p class="dimension-evidence">Evidence of: consistency vs. bursty activity.</p>
+    </div>
+    <div class="dimension-card">
+      <h3>Issue Refinement</h3>
+      <p>Issue closure rate, comments per issue, and resolution time.</p>
+      <p class="dimension-evidence">Evidence of: problem identification and follow-through.</p>
+    </div>
+    <div class="dimension-card">
+      <h3>Integration</h3>
+      <p>Pull-request merge rate, reviewed-PR ratio, and cycle time.</p>
+      <p class="dimension-evidence">Evidence of: structured collaboration and review.</p>
+    </div>
+  </div>
+</section>
+
+<section class="info-section score-explainer">
+  <h2>Experimentation Intensity Score</h2>
+  <dl class="explainer-list">
+    <dt>How it's calculated</dt>
+    <dd>
+      Each of the four dimensions above is min&ndash;max normalised
+      against every repository currently in the database (and
+      reverse-coded where a lower raw value is the stronger pattern,
+      e.g. shorter inactivity gaps). The applicable dimensions are
+      then averaged and scaled to 0&ndash;100.
+    </dd>
+    <dt>What it represents</dt>
+    <dd>
+      One comparable figure for how much iterative, structured
+      development activity a repository shows &mdash; not a measure
+      of code quality or project success.
+    </dd>
+    <dt>How to interpret it</dt>
+    <dd>
+      Because normalisation is relative to whatever repositories are
+      currently stored, the same activity could score differently
+      against a different set of repositories. Treat it as a
+      within-this-dataset ranking aid, not a universal, externally
+      validated benchmark.
+    </dd>
+    <dt>How to use it</dt>
+    <dd>
+      Compare repositories side by side, but always check the four
+      dimension scores and the underlying metrics on each
+      repository's page &mdash; they're the evidence behind the
+      headline number, not just supporting detail.
+    </dd>
+  </dl>
+</section>
+
+<section class="info-section score-explainer">
+  <h2>Learning Quality Indicator</h2>
+  <dl class="explainer-list">
+    <dt>How it's calculated</dt>
+    <dd>
+      Every classified commit message, issue, pull request and
+      review is assigned one of five categories by a TF-IDF +
+      classifier: Problem Identification, Experimentation,
+      Reflection, Refinement, or None. The indicator is the
+      percentage of classified text that fell into one of the four
+      substantive categories (i.e. not None).
+    </dd>
+    <dt>What it represents</dt>
+    <dd>
+      An estimate of how much of a repository's written text reads
+      as learning-oriented language &mdash; describing problems,
+      trying things, reflecting on outcomes, or refining work &mdash;
+      rather than routine or administrative text.
+    </dd>
+    <dt>How to interpret it</dt>
+    <dd class="caveat-box">
+      {% if nlp_validation %}
+      The current classifier ({{ nlp_validation.selected_model }}) was
+      trained on {{ nlp_validation.training_records }} labelled
+      examples and measured
+      <strong>{{ nlp_validation.accuracy_percent }} accuracy</strong>
+      and <strong>{{ nlp_validation.macro_f1_percent }} macro-F1</strong>
+      in cross-validation, with agreement rated
+      &ldquo;{{ nlp_validation.cohen_kappa_interpretation }}&rdquo;.
+      Treat individual classifications as exploratory suggestions,
+      not certainties &mdash; use the category breakdown to sense-check
+      against the actual repository text rather than relying on the
+      percentage alone.
+      {% else %}
+      This classifier has not yet been formally validated in this
+      deployment. Treat classifications as exploratory until
+      validation results are available.
+      {% endif %}
+    </dd>
+    <dt>How to use it</dt>
+    <dd>
+      As a starting point for identifying which artefacts might be
+      worth reading directly &mdash; not as definitive proof that
+      learning occurred.
+    </dd>
+  </dl>
+</section>
+
+<section class="info-section">
+  <h2>Limitations, honestly</h2>
+  <ul class="value-list">
+    <li><strong>Small samples.</strong> Metrics were developed and tested against a small number of controlled and public repositories.</li>
+    <li><strong>Limited NLP training data.</strong> The classifier was trained on a small labelled dataset, so it may struggle with unfamiliar wording, short messages, or ambiguous text.</li>
+    <li><strong>Project-specific indicators.</strong> The Experimentation Intensity Score and Learning Quality Indicator were developed for this study and haven't been validated across a large external population &mdash; read them as indicators of repository behaviour, not proof of learning.</li>
+  </ul>
+</section>
+
+<section class="stats-strip">
+  <p>
+    Currently tracking <strong>{{ tracked_repository_count }}</strong>
+    repositor{{ 'y' if tracked_repository_count == 1 else 'ies' }}.
+    {% if nlp_validation %}
+    NLP classifier last validated at
+    <strong>{{ nlp_validation.accuracy_percent }}</strong> accuracy on
+    <strong>{{ nlp_validation.training_records }}</strong> labelled examples.
+    {% endif %}
+  </p>
+</section>
+{% endblock %}

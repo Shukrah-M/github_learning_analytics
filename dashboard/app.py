@@ -61,6 +61,11 @@ from dashboard.charts import (  # noqa: E402
     render_sparkline,
 )
 from dashboard.csrf import generate_csrf_token, validate_csrf_token  # noqa: E402
+from dashboard.explanations import (  # noqa: E402
+    explain_experimentation_score,
+    explain_learning_quality_indicator,
+    load_nlp_validation_summary,
+)
 from dashboard.rate_limit import RateLimiter  # noqa: E402
 from dashboard.reports import (  # noqa: E402
     build_all_repositories_summary_csv,
@@ -72,6 +77,12 @@ from extractor.pipeline import run_extraction_pipeline  # noqa: E402
 
 
 load_dotenv()
+
+PROJECT_TITLE = (
+    "A GitHub-Based Learning Analytics System for Analysing "
+    "Entrepreneurial Learning Behaviour in Software Product Development"
+)
+PROJECT_AUTHOR = "Shukurah Adebara"
 
 MODEL_PATH = PROJECT_ROOT / "models" / "nlp_classifier.joblib"
 
@@ -104,6 +115,15 @@ app.secret_key = FLASK_SECRET_KEY
 # for rate limiting) and url_for's scheme are correct when running
 # behind a reverse proxy, which most hosting platforms use.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+
+
+@app.context_processor
+def inject_project_identity():
+    """Make the project title/author available to every template."""
+    return {
+        "project_title": PROJECT_TITLE,
+        "project_author": PROJECT_AUTHOR,
+    }
 
 
 def format_metric(value: Any, kind: str) -> str:
@@ -416,6 +436,32 @@ def index():
         db_session.close()
 
 
+@app.route("/how-it-works")
+def how_it_works():
+    db_session = SessionLocal()
+
+    try:
+        tracked_repository_count = len(get_all_repositories(db_session))
+
+        return render_template(
+            "how_it_works.html",
+            tracked_repository_count=tracked_repository_count,
+            nlp_validation=load_nlp_validation_summary(),
+        )
+
+    except SQLAlchemyError as error:
+        return (
+            render_template(
+                "error.html",
+                message=f"Could not reach the database: {error}",
+            ),
+            500,
+        )
+
+    finally:
+        db_session.close()
+
+
 @app.route("/repository/<int:repository_id>")
 def repository_detail(repository_id: int):
     db_session = SessionLocal()
@@ -439,7 +485,25 @@ def repository_detail(repository_id: int):
                     ("Regularity", score["regularity_score"]),
                     ("Issue Refinement", score["refinement_score"]),
                     ("Integration", score["integration_score"]),
-                ]
+                ],
+                tooltips={
+                    "Engagement": (
+                        "Commit frequency and active-day ratio: how "
+                        "much sustained iterative effort is recorded."
+                    ),
+                    "Regularity": (
+                        "Commit interval variability and longest "
+                        "inactivity gap: how evenly spaced activity is."
+                    ),
+                    "Issue Refinement": (
+                        "Issue closure rate, comments per issue and "
+                        "resolution time: problem follow-through."
+                    ),
+                    "Integration": (
+                        "PR merge rate, reviewed-PR ratio and cycle "
+                        "time: structured collaboration and review."
+                    ),
+                },
             ),
             "nlp_donut": (
                 render_donut_chart(nlp_result["category_distribution"])
@@ -478,6 +542,11 @@ def repository_detail(repository_id: int):
             nlp_error=analysis["nlp_error"],
             category_rows=category_rows,
             charts=charts,
+            score_explanation=explain_experimentation_score(
+                score, analysis["metrics"]
+            ),
+            nlp_explanation=explain_learning_quality_indicator(nlp_result),
+            nlp_validation=load_nlp_validation_summary(),
         )
 
     except SQLAlchemyError as error:

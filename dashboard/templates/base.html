@@ -8,16 +8,22 @@
 </head>
 <body>
   <header class="site-header">
-    <a class="site-title" href="{{ url_for('index') }}">GitHub-Based Learning Analytics</a>
+    <a class="site-title-link" href="{{ url_for('index') }}">
+      <span class="site-title">{{ project_title }}</span>
+      <span class="site-subtitle">GitHub-Based Learning Analytics Dashboard</span>
+    </a>
     <nav class="site-nav">
-      <a href="{{ url_for('add_repository') }}">+ Add repository</a>
+      <a href="{{ url_for('index') }}">Repositories</a>
+      <a href="{{ url_for('how_it_works') }}">How the scores work</a>
+      <a class="button-link" href="{{ url_for('add_repository') }}">+ Add repository</a>
     </nav>
   </header>
   <main class="site-main">
     {% block content %}{% endblock %}
   </main>
   <footer class="site-footer">
-    <p>MSc research dashboard &middot; data sourced from PostgreSQL</p>
+    <p>Developed by {{ project_author }} &middot; MSc Information Technology</p>
+    <p><a href="{{ url_for('how_it_works') }}">How the scores work</a> &middot; data sourced from PostgreSQL</p>
   </footer>
 </body>
 </html>

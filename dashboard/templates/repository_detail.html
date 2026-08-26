@@ -1,5 +1,26 @@
 {% extends "base.html" %}
 
+{% set metric_tooltips = {
+  "Commit frequency": "Commits per week during the observation period.",
+  "Active-day ratio": "Share of days in the observation window with at least one commit.",
+  "Commit interval variability": "Standard deviation of time between commits, in days. N/A with fewer than two commits.",
+  "Longest inactivity gap": "Longest gap between consecutive commits, in days. N/A without sufficient timestamps.",
+  "Total issues": "Number of issues created during the observation period.",
+  "Issue closure rate": "Share of issues that were closed.",
+  "Mean comments per issue": "Average number of comments per issue.",
+  "Mean issue resolution time": "Average days between an issue's creation and closure.",
+  "Total pull requests": "Number of pull requests opened during the observation period.",
+  "Merge rate": "Share of pull requests that were merged.",
+  "Reviewed PR ratio": "Share of pull requests that received at least one review.",
+  "Mean PR cycle time": "Average days between a pull request's opening and merging."
+} %}
+
+{% set metric_group_captions = {
+  "Commit activity": "Feeds into: Engagement & Regularity",
+  "Issue activity": "Feeds into: Issue Refinement",
+  "Pull request activity": "Feeds into: Integration"
+} %}
+
 {% block title %}{{ repository.owner }}/{{ repository.name }} - GitHub Learning Analytics{% endblock %}
 
 {% block content %}
@@ -27,15 +48,50 @@
     meaningful as more repositories are added.
   </p>
   {{ charts.score_bar | safe }}
+
+  <details class="info-box">
+    <summary>How is this calculated, and why did I get this score?</summary>
+    <dl class="explainer-list">
+      <dt>Why you got this score</dt>
+      <dd>{{ score_explanation }}</dd>
+      <dt>How it's calculated</dt>
+      <dd>
+        Each dimension is min&ndash;max normalised against every
+        repository currently in the database (reverse-coded where a
+        lower raw value is the stronger pattern), then the applicable
+        dimensions are averaged and scaled to 0&ndash;100.
+      </dd>
+      <dt>What it represents</dt>
+      <dd>
+        One comparable figure for how much iterative, structured
+        development activity a repository shows &mdash; not code
+        quality or project success.
+      </dd>
+      <dt>How to interpret it</dt>
+      <dd>
+        It's relative to whatever repositories are currently stored,
+        so treat it as a within-this-dataset ranking aid, not a
+        universal benchmark.
+      </dd>
+      <dt>How to use it</dt>
+      <dd>
+        Compare repositories side by side, and check the four
+        dimension scores and metric cards below for the evidence
+        behind the number.
+        <a href="{{ url_for('how_it_works') }}">Full explanation &rarr;</a>
+      </dd>
+    </dl>
+  </details>
 </section>
 
 <section class="metric-grid">
   {% for group in metric_groups %}
   <div class="metric-card">
     <h3>{{ group.title }}</h3>
+    <p class="metric-card-caption">{{ metric_group_captions.get(group.title, "") }}</p>
     <dl>
       {% for label, value in group.rows %}
-      <dt>{{ label }}</dt>
+      <dt title="{{ metric_tooltips.get(label, '') }}">{{ label }}</dt>
       <dd>{{ value }}</dd>
       {% endfor %}
     </dl>
@@ -49,10 +105,60 @@
 </section>
 
 <section class="nlp-section">
-  <h2>Text Classification (NLP)</h2>
+  <h2>Learning Quality Indicator</h2>
   {% if nlp_error %}
   <p class="empty-state">{{ nlp_error }}</p>
   {% elif nlp_result %}
+  <p class="score-headline">{{ "%.1f"|format(nlp_result.learning_quality_indicator) }}<span class="score-out-of">%</span></p>
+  <p class="score-caveat">
+    Share of classified repository text &mdash; commit messages,
+    issues, pull requests and reviews &mdash; that reads as
+    substantive learning-oriented language (problem identification,
+    experimentation, reflection or refinement) rather than routine
+    text.
+  </p>
+
+  <details class="info-box">
+    <summary>How is this calculated, and why did I get this score?</summary>
+    <dl class="explainer-list">
+      <dt>Why you got this score</dt>
+      <dd>{{ nlp_explanation }}</dd>
+      <dt>How it's calculated</dt>
+      <dd>
+        Every classified text snippet is assigned one of five
+        categories by a TF-IDF + classifier: Problem Identification,
+        Experimentation, Reflection, Refinement, or None. The
+        indicator is the percentage that fell into one of the four
+        substantive categories.
+      </dd>
+      <dt>What it represents</dt>
+      <dd>
+        An estimate of how much repository text reflects
+        learning-oriented language vs. routine/administrative text.
+      </dd>
+      <dt>How to interpret it</dt>
+      <dd class="caveat-box">
+        {% if nlp_validation %}
+        The current classifier ({{ nlp_validation.selected_model }})
+        was trained on {{ nlp_validation.training_records }} labelled
+        examples and measured
+        <strong>{{ nlp_validation.accuracy_percent }} accuracy</strong>
+        in cross-validation. Treat classifications as exploratory
+        suggestions, not certainties.
+        {% else %}
+        This classifier has not yet been formally validated in this
+        deployment &mdash; treat classifications as exploratory.
+        {% endif %}
+      </dd>
+      <dt>How to use it</dt>
+      <dd>
+        As a starting point for which artefacts might be worth
+        reading directly &mdash; not proof that learning occurred.
+        <a href="{{ url_for('how_it_works') }}">Full explanation &rarr;</a>
+      </dd>
+    </dl>
+  </details>
+
   <div class="nlp-summary">
     <div class="donut-block">
       {{ charts.nlp_donut | safe }}
@@ -67,17 +173,6 @@
         </div>
         {% endfor %}
       </div>
-    </div>
-    <div class="nlp-stats">
-      <p class="nlp-headline">{{ "%.1f"|format(nlp_result.learning_quality_indicator) }}%
-        of classified text falls into a substantive learning-indicator category.</p>
-      <p class="nlp-caveat">
-        Classifying repository text this way surfaces patterns of
-        problem-solving, experimentation and refinement across
-        commits, issues and pull requests far faster than reading
-        every entry by hand &mdash; giving a consistent, repeatable
-        lens for comparing behaviour across repositories.
-      </p>
     </div>
   </div>
   {% endif %}
